@@ -1,0 +1,6 @@
+# Regular Python bytecode file
+*.pyc
+__pycache__/
+
+# PyCharm settings file
+/.idea/
