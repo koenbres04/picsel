@@ -1,9 +1,10 @@
 from __future__ import annotations
 import functools
 import json
-import pygame
 import os
 import shutil
+import abc
+import pygame
 from pygame_gl_code import PygameGLWindow
 from imgui_rendering import ImguiUI
 import imgui
@@ -66,7 +67,7 @@ class Selection:
                 source = Source.from_selection_file(os.path.join(base_dir, source_path))
             result.sources.append(source)
             source_set = set(source_data["selection"])
-            result.subsets.append(set(i for i, image_path in source.image_paths if image_path in source_set))
+            result.subsets.append(set(i for i, image_path in enumerate(source.image_paths) if image_path in source_set))
         return result
 
     def add_source(self, source: Source):
@@ -92,20 +93,47 @@ class Selection:
             json.dump(result, file, indent=2)
 
     def export(self, folder: str):
+        print("")
         for source, subset in zip(self.sources, self.subsets):
+            n = 0
             for i, file in enumerate(source.image_paths):
                 if i in subset:
-                    shutil.copyfile(os.path.join(source.relative_to_dir, file), folder)
+                    print(f"\rcopying files {n+1}/{len(subset)} from {source.name}...", end="")
+                    n += 1
+                    # noinspection PyTypeChecker
+                    shutil.copy2(os.path.join(source.relative_to_dir, file), folder)
+
+
+
+class Viewer(abc.ABC):
+
+    def handle_inputs(self, parent: Application) -> None:
+        pass
+
+    @abc.abstractmethod
+    def draw_ui(self, parent: Application) -> None:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        pass
+
+    @abc.abstractmethod
+    def open(self):
+        pass
 
 
 class Application:
-    def __init__(self, window: PygameGLWindow, ui: ImguiUI):
+    def __init__(self, window: PygameGLWindow, ui: ImguiUI, viewers: list[Viewer]):
         self.window = window
         self.ui = ui
         self.current_file: str | None = None
         self.changed = False
         self.selection = Selection()
         self.after_popup = None
+        self.viewers = viewers
+        self.open_changes_popup = False
 
     def draw_menu_items(self):
         with imgui.begin_menu("File") as file_menu:
@@ -120,6 +148,11 @@ class Application:
                     self.save_as()
                 if imgui.menu_item("Export")[0]:
                     self.export()
+        with imgui.begin_menu("View") as view_menu:
+            if view_menu.opened:
+                for viewer in self.viewers:
+                    if imgui.menu_item(viewer.name)[0]:
+                        viewer.open()
 
     def draw_changes_pop_up(self):
         imgui.text("Do you want to save your current changes?")
@@ -156,22 +189,27 @@ class Application:
 
     def new_file(self, allow_popup=True):
         if allow_popup and self.changed:
-            imgui.open_popup("You have unsaved changes.")
+            self.open_changes_popup = True
             self.after_popup = functools.partial(self.new_file, allow_popup=False)
+            return
         self.selection = Selection()
         self.current_file = None
         self.changed = False
 
-    def open(self, allow_popup=True):
-        if allow_popup and self.changed:
-            imgui.open_popup("You have unsaved changes.")
-            self.after_popup = functools.partial(self.open, allow_popup=False)
-        file = easygui.fileopenbox(filetypes=["*.json"])
-        if file is None:
-            return
+    def open_file(self, file: str):
         self.selection = Selection.from_file(file)
         self.current_file = file
         self.changed = False
+
+    def open(self, allow_popup=True):
+        if allow_popup and self.changed:
+            self.open_changes_popup = True
+            self.after_popup = functools.partial(self.open, allow_popup=False)
+            return
+        file = easygui.fileopenbox(filetypes=["*.json"])
+        if file is None:
+            return
+        self.open_file(file)
 
     def save(self):
         if self.current_file is None:
@@ -207,6 +245,12 @@ class Application:
             self.window.caption = (f"picsel - {'new file' if self.current_file is None else self.current_file}"
                                    f"{'*' if self.changed else ''}")
             self.ui.process_events()
+
+            if self.window.is_key_down(pygame.K_LCTRL) and self.window.on_key_down(pygame.K_s):
+                self.save()
+            for viewer in self.viewers:
+                viewer.handle_inputs(self)
+
             self.ui.new_frame()
 
             # main menu
@@ -215,6 +259,9 @@ class Application:
                 if main_menu_bar.opened:
                     self.draw_menu_items()
 
+            if self.open_changes_popup:
+                imgui.open_popup("You have unsaved changes.")
+                self.open_changes_popup = False
             with imgui.begin_popup_modal("You have unsaved changes.") as popup:
                 if popup.opened:
                     self.draw_changes_pop_up()
@@ -225,31 +272,10 @@ class Application:
                                                imgui.WINDOW_NO_RESIZE):
                 self.draw_source_window()
 
+            for viewer in self.viewers:
+                viewer.draw_ui(self)
+
             self.ui.render()
 
-TRACKED_KEYS = [
-    pygame.K_LCTRL, pygame.K_s
-]
 SOURCES_WINDOW_WIDTH = 200.
-IMAGE_EXTENSIONS = {".png", ".jpeg"}
-
-
-def main():
-    window = PygameGLWindow(
-        size=(1000, 800),
-        caption="picsel - new file",
-        frame_rate=144,
-        background_color=(0, 0, 0),
-        resizable=True
-    )
-
-    with window:
-        ui = ImguiUI(window)
-        app = Application(window, ui)
-        app.main_loop()
-
-
-
-
-if __name__ == '__main__':
-    main()
+IMAGE_EXTENSIONS = {".png", ".jpeg", ".jpg"}

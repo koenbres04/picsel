@@ -11,11 +11,12 @@ PYGAME_DIGITS = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
 
 class PygameGLWindow:
     def __init__(self, size: tuple[int, int], caption: str, frame_rate: float, background_color,
-                 resizable=False, tracked_keys=None, track_digits=False):
+                 resizable=False, tracked_keys=None, track_digits=False, check_for_close=True):
         self._start_screen_size = size
         self._caption = caption
         self.frame_rate = frame_rate
         self.background_color = background_color
+        self.check_for_close = check_for_close
         self._resizable = resizable
         self._int_size: tuple[int, int] = size
         self._do_quit = False
@@ -87,7 +88,7 @@ class PygameGLWindow:
         self._scroll_wheel_y = 0
         self._on_screen_resized = False
         for event in self.events:
-            if event.type == pygame.QUIT:
+            if self.check_for_close and event.type == pygame.QUIT:
                 self.quit()
             elif self._resizable and event.type == pygame.VIDEORESIZE:
                 self._update_size(event.size)
