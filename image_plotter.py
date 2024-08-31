@@ -129,6 +129,7 @@ class LerpAnimation(Animation):
 
 ZOOM_FACTOR = 1.1
 SELECTION_COLOR = (234/255, 237/255, 24/255)
+SELECTION_THICKNESS = 2
 ARROW_COLOR = (0/255, 158/255, 176/255)
 ARROW_HEIGHT = 10
 ARROW_WIDTH = 10
@@ -215,6 +216,19 @@ class ImagePlotter(Viewer):
                     self.image_viewer = viewer
             self.camera.scale = 2./min(app.window.width, app.window.height)
         self.is_initialised = True
+
+    @staticmethod
+    def draw_circle(app: Application, circle: CircleData, selected: bool = False):
+        if (
+            circle.center[0] <= -circle.radius-SELECTION_THICKNESS or
+            circle.center[0] >= app.window.width+circle.radius+SELECTION_THICKNESS or
+            circle.center[1] <= -circle.radius - SELECTION_THICKNESS or
+            circle.center[1] >= app.window.height + circle.radius + SELECTION_THICKNESS
+        ):
+            return
+        if selected:
+            app.ui.draw_filled_circle(circle.center, circle.radius+SELECTION_THICKNESS, SELECTION_COLOR)
+        app.ui.draw_filled_circle(circle.center, circle.radius, circle.color)
 
     def draw_ui(self, app: Application) -> None:
         if not self.is_shown:

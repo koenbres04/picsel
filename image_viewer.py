@@ -87,16 +87,19 @@ class ImageViewer(Viewer):
             if self.image_texture is None:
                 imgui.text("No image to show")
                 return
+            # draw info text
             width, height = self.image_texture.size
             file_name = os.path.split(self.current_source.image_paths[self.current_image])[1]
             imgui.text(f"{self.current_source.name} - {file_name}"
                        f" ({self.current_image+1}/{len(self.current_source.image_paths)}) - {width}x{height}")
+            # determine image size
             window_size = imgui.get_window_size()
             window_pos = imgui.get_window_position()
             available_size = tuple(max(100, window_size[i]-IMAGE_TOP_LEFT_OFFSET[i]-IMAGE_BOTTOM_RIGHT_OFFSET[i])
                                    for i in (0, 1))
             scale_factor = min(available_size[i]/self.image_texture.size[i] for i in (0, 1))
 
+            # draw selection outline
             subset = app.selection.subsets[app.selection.sources.index(self.current_source)]
             imgui.get_window_draw_list().add_rect(
                 window_pos[0]+IMAGE_TOP_LEFT_OFFSET[0],
@@ -107,12 +110,9 @@ class ImageViewer(Viewer):
                 imgui.get_color_u32_rgba(.7, 0., 0., 1.),
                 thickness=OUTLINE_THICKNESS
             )
+            # draw image
             imgui.get_window_draw_list().add_image(self.image_texture.glo, tuple(
                 window_pos[i]+IMAGE_TOP_LEFT_OFFSET[i] for i in (0, 1)
             ), tuple(
                 round(window_pos[i]+IMAGE_TOP_LEFT_OFFSET[i]+scale_factor*self.image_texture.size[i]) for i in (0, 1)
             ))
-
-
-
-

@@ -42,6 +42,7 @@ class HilbertPlotter(PositionGenerator):
         self.max_time = datetime.datetime.min
         self.curve_iterations = 20
         self.log_point_radius = -9
+        self.alpha = 1.
         self.load_colors = False
 
     @property
@@ -57,7 +58,8 @@ class HilbertPlotter(PositionGenerator):
     def draw_ui(self) -> None:
         _, x = imgui.input_int("curve iterations", self.curve_iterations)
         self.curve_iterations = min(30, max(1, x))
-        _, self.log_point_radius = imgui.slider_float("Point radius", self.log_point_radius, -20, -4)
+        _, self.log_point_radius = imgui.slider_float("point radius", self.log_point_radius, -15, -4)
+        _, self.alpha = imgui.slider_float("point alpha", self.alpha, 0., 1.)
         _, self.load_colors = imgui.checkbox("read colors", self.load_colors)
 
     def process(self, app: Application, source: Source, index: int, pil_image: Image.Image):
@@ -81,5 +83,6 @@ class HilbertPlotter(PositionGenerator):
         if self.colors is None:
             color = (.7, 0., 0.)
         else:
-            color = np.array(self.colors[source][index], dtype=float)/255
+            color = tuple(np.array(self.colors[source][index], dtype=float)/255)
+        color = color + (self.alpha,)
         return CircleData(np.array([-1., -1.]) + 2 * p, 2**self.log_point_radius, color)
