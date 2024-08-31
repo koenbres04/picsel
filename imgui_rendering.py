@@ -207,3 +207,20 @@ class ImguiUI:
         if len(color) == 3:
             color.append(1.)
         imgui.get_background_draw_list().add_circle_filled(*np.round(pos), radius, imgui.get_color_u32_rgba(*color))
+
+    @staticmethod
+    def draw_rect(top_left: np.ndarray, size: np.ndarray, color: Iterable[SupportsFloat]):
+        color = [float(x) for x in color]
+        if len(color) == 3:
+            color.append(1.)
+        imgui.get_background_draw_list().add_rect_filled(top_left[0], top_left[1], top_left[0]+size[0], top_left[1]+size[1],
+                                                 imgui.get_color_u32_rgba(*color))
+
+    @staticmethod
+    def draw_triangle_filled(v1: np.ndarray, v2: np.ndarray, v3: np.ndarray, color: Iterable[SupportsFloat]):
+        color = [float(x) for x in color]
+        if len(color) == 3:
+            color.append(1.)
+        imgui.get_background_draw_list().add_triangle_filled(
+            v1[0], v1[1], v2[0], v2[1], v3[0], v3[1], imgui.get_color_u32_rgba(*color)
+        )

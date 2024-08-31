@@ -43,6 +43,14 @@ class Source:
         return Source(path, False, image_paths)
 
     @property
+    def absolute_image_paths(self):
+        for image_path in self.image_paths:
+            if self.is_folder:
+                yield os.path.join(self.absolute_path, image_path)
+            else:
+                yield os.path.join(os.path.dirname(self.absolute_path), image_path)
+
+    @property
     def name(self) -> str:
         return os.path.basename(self.absolute_path)
 
@@ -107,11 +115,11 @@ class Selection:
 
 class Viewer(abc.ABC):
 
-    def handle_inputs(self, parent: Application) -> None:
+    def handle_inputs(self, app: Application) -> None:
         pass
 
     @abc.abstractmethod
-    def draw_ui(self, parent: Application) -> None:
+    def draw_ui(self, app: Application) -> None:
         pass
 
     @property
@@ -248,6 +256,12 @@ class Application:
 
             if self.window.is_key_down(pygame.K_LCTRL) and self.window.on_key_down(pygame.K_s):
                 self.save()
+            if self.window.on_window_close():
+                if self.changed:
+                    self.open_changes_popup = True
+                    self.after_popup = lambda : self.window.quit()
+                else:
+                    self.window.quit()
             for viewer in self.viewers:
                 viewer.handle_inputs(self)
 

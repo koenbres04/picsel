@@ -33,43 +33,43 @@ class ImageViewer(Viewer):
     def open(self):
         self.is_shown = True
 
-    def ensure_source_exists(self, parent: Application):
-        if self.current_source in parent.selection.sources:
+    def ensure_source_exists(self, app: Application):
+        if self.current_source in app.selection.sources:
             return
         self.current_image = 0
-        if sum(len(source.image_paths) for source in parent.selection.sources) == 0:
+        if sum(len(source.image_paths) for source in app.selection.sources) == 0:
             self.current_source = None
             self.image_texture = None
             return
-        for source in parent.selection.sources:
+        for source in app.selection.sources:
             if source.image_paths:
                 self.current_source = source
                 self.update_texture()
                 return
 
-    def handle_inputs(self, parent: Application) -> None:
-        if self.current_source is None or parent.ui.want_capture_keyboard:
+    def handle_inputs(self, app: Application) -> None:
+        if self.current_source is None or app.ui.want_capture_keyboard:
             return
         try:
-            source_index = parent.selection.sources.index(self.current_source)
+            source_index = app.selection.sources.index(self.current_source)
         except ValueError:
             return
-        if parent.window.on_key_down(pygame.K_SPACE):
-            if self.current_image in parent.selection.subsets[source_index]:
-                parent.selection.subsets[source_index].remove(self.current_image)
+        if app.window.on_key_down(pygame.K_SPACE):
+            if self.current_image in app.selection.subsets[source_index]:
+                app.selection.subsets[source_index].remove(self.current_image)
             else:
-                parent.selection.subsets[source_index].add(self.current_image)
-        if parent.window.on_key_down(pygame.K_LEFT):
+                app.selection.subsets[source_index].add(self.current_image)
+        if app.window.on_key_down(pygame.K_LEFT):
             self.current_image = self.current_image-1
             if self.current_image == -1:
-                self.current_source = parent.selection.sources[(source_index-1)%len(parent.selection.sources)]
+                self.current_source = app.selection.sources[(source_index-1)%len(app.selection.sources)]
                 self.current_image = len(self.current_source.image_paths)-1
             self.update_texture()
-        elif parent.window.on_key_down(pygame.K_RIGHT):
+        elif app.window.on_key_down(pygame.K_RIGHT):
             self.current_image = self.current_image+1
             if self.current_image == len(self.current_source.image_paths):
                 self.current_image = 0
-                self.current_source = parent.selection.sources[(source_index+1)%len(parent.selection.sources)]
+                self.current_source = app.selection.sources[(source_index+1)%len(app.selection.sources)]
             self.update_texture()
 
     def update_texture(self):
@@ -77,13 +77,13 @@ class ImageViewer(Viewer):
                                                             self.current_source.image_paths[self.current_image]))
 
 
-    def draw_ui(self, parent: Application) -> None:
+    def draw_ui(self, app: Application) -> None:
         if not self.is_shown:
             return
         with imgui.begin("Image viewer", True, imgui.WINDOW_NO_COLLAPSE) as image_window:
             if not image_window.opened:
                 self.is_shown = False
-            self.ensure_source_exists(parent)
+            self.ensure_source_exists(app)
             if self.image_texture is None:
                 imgui.text("No image to show")
                 return
@@ -97,7 +97,7 @@ class ImageViewer(Viewer):
                                    for i in (0, 1))
             scale_factor = min(available_size[i]/self.image_texture.size[i] for i in (0, 1))
 
-            subset = parent.selection.subsets[parent.selection.sources.index(self.current_source)]
+            subset = app.selection.subsets[app.selection.sources.index(self.current_source)]
             imgui.get_window_draw_list().add_rect(
                 window_pos[0]+IMAGE_TOP_LEFT_OFFSET[0],
                 window_pos[1]+IMAGE_TOP_LEFT_OFFSET[1],

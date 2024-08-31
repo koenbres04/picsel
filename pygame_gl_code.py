@@ -4,6 +4,7 @@ import pygame
 import pygame.gfxdraw
 import moderngl
 import OpenGL.GL as GL
+from pygame._sdl2 import Window as SDL2Window
 
 
 PYGAME_DIGITS = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
@@ -11,19 +12,22 @@ PYGAME_DIGITS = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
 
 class PygameGLWindow:
     def __init__(self, size: tuple[int, int], caption: str, frame_rate: float, background_color,
-                 resizable=False, tracked_keys=None, track_digits=False, check_for_close=True):
+                 resizable=False, tracked_keys=None, track_digits=False, check_for_close=True, open_maximized=False,
+                 double_click_time: float = 0.4):
         self._start_screen_size = size
         self._caption = caption
         self.frame_rate = frame_rate
         self.background_color = background_color
         self.check_for_close = check_for_close
         self._resizable = resizable
+        self._open_maximized = open_maximized
         self._int_size: tuple[int, int] = size
         self._do_quit = False
         self.mgl: moderngl.Context | None = None
         self.clock = None
         self._screen2cam: np.ndarray = np.zeros((4, 3), dtype=float)
-        self._update_size(size)
+        if size != (0, 0):
+            self._update_size(size)
         self._cur_pos = None
         self._cur_click = None
         self._delta_cur = None
@@ -31,12 +35,16 @@ class PygameGLWindow:
         self._key_tracking = dict()
         self._key_down_tracking = dict()
         self.track_digits = track_digits
+        self.double_click_time = double_click_time
         self.digit_presses = []
         self._default_font = None
         self._on_mouse_down = [False for _ in range(20)]
         self._on_mouse_up = [False for _ in range(20)]
         self._scroll_wheel_y = 0
         self._on_screen_resized = False
+        self._on_window_close = False
+        self._time_since_left_click = 0
+        self._on_double_left_click = False
         if tracked_keys is not None:
             for key in tracked_keys:
                 self._key_tracking[key] = False
@@ -46,8 +54,13 @@ class PygameGLWindow:
         pygame.init()
         if self._resizable:
             pygame.display.set_mode(self._start_screen_size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
+            if self._open_maximized:
+                SDL2Window.from_display_module().maximize()
         else:
             pygame.display.set_mode(self._start_screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
+        if self._start_screen_size == (0, 0):
+            info_object = pygame.display.Info()
+            self._update_size((info_object.current_w, info_object.current_h))
         pygame.display.set_caption(self._caption)
 
         # initialise moderngl
@@ -76,6 +89,7 @@ class PygameGLWindow:
         self._cur_pos = self._screen_to_np(pygame.mouse.get_pos())
         self._delta_cur = self._cur_pos-last_cur_pos
         self._cur_click = pygame.mouse.get_pressed()
+        self._time_since_left_click += self.delta_time
 
         # handle events
         self.events = pygame.event.get()
@@ -87,9 +101,13 @@ class PygameGLWindow:
             self._on_mouse_up[i] = False
         self._scroll_wheel_y = 0
         self._on_screen_resized = False
+        self._on_window_close = False
+        self._on_double_left_click = False
         for event in self.events:
-            if self.check_for_close and event.type == pygame.QUIT:
-                self.quit()
+            if event.type == pygame.QUIT:
+                self._on_window_close = True
+                if self.check_for_close:
+                    self.quit()
             elif self._resizable and event.type == pygame.VIDEORESIZE:
                 self._update_size(event.size)
                 self._on_screen_resized = True
@@ -102,6 +120,10 @@ class PygameGLWindow:
                     self._key_tracking[event.key] = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self._on_mouse_down[event.button] = True
+                if event.button == 1:
+                    if self._time_since_left_click <= self.double_click_time:
+                        self._on_double_left_click = True
+                    self._time_since_left_click = 0.
             elif event.type == pygame.MOUSEBUTTONUP:
                 self._on_mouse_up[event.button] = True
             elif event.type == pygame.MOUSEWHEEL:
@@ -221,6 +243,12 @@ class PygameGLWindow:
 
     def on_resize(self):
         return self._on_screen_resized
+
+    def on_window_close(self):
+        return self._on_window_close
+
+    def on_double_left_click(self):
+        return self._on_double_left_click
 
     @staticmethod
     def np_to_screen(x: np.ndarray):
