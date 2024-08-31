@@ -153,7 +153,7 @@ class PygameRenderer(ProgrammablePipelineRenderer):
 
 
 class ImguiUI:
-    def __init__(self, window: PygameGLWindow, srbg_correction=False):
+    def __init__(self, window: PygameGLWindow, srbg_correction=False, ini_file: str | None = None):
         self.window = window
         imgui.create_context()
         self.impl = PygameRenderer()
@@ -161,6 +161,8 @@ class ImguiUI:
 
         self.io = imgui.get_io()
         self.io.display_size = self.window.int_size
+        if ini_file is not None:
+            self.io.ini_file_name = ini_file
 
     def process_events(self):
         for event in self.window.events:

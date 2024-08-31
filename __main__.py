@@ -1,5 +1,6 @@
 import sys
 import pygame
+import os.path
 from pygame_gl_code import PygameGLWindow
 from imgui_rendering import ImguiUI
 from application import Application
@@ -24,7 +25,7 @@ def main():
     )
 
     with window:
-        ui = ImguiUI(window)
+        ui = ImguiUI(window, ini_file=os.path.join(os.path.dirname(__file__), "imgui.ini"))
         app = Application(window, ui, [ListViewer(), ImageViewer(), ImagePlotter([HilbertPlotter()])])
         if len(sys.argv) >= 2:
             app.open_file(sys.argv[1])
