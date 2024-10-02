@@ -76,6 +76,10 @@ class ImageViewer(Viewer):
         self.image_texture = texture_from_file(os.path.join(self.current_source.relative_to_dir,
                                                             self.current_source.image_paths[self.current_image]))
 
+    def set_image(self, source: Source, image: int):
+        self.current_source = source
+        self.current_image = image
+        self.update_texture()
 
     def draw_ui(self, app: Application) -> None:
         if not self.is_shown:

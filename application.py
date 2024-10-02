@@ -156,7 +156,7 @@ class Application:
                     self.save_as()
                 if imgui.menu_item("Export")[0]:
                     self.export()
-        with imgui.begin_menu("View") as view_menu:
+        with imgui.begin_menu("Tools") as view_menu:
             if view_menu.opened:
                 for viewer in self.viewers:
                     if imgui.menu_item(viewer.name)[0]:

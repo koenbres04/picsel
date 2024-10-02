@@ -192,9 +192,7 @@ class ImagePlotter(Viewer):
                             closest_image = i
                             closest_distance = d
             if closest_source is not None:
-                self.image_viewer.current_source = closest_source
-                self.image_viewer.current_image = closest_image
-                self.image_viewer.update_texture()
+                self.image_viewer.set_image(closest_source, closest_image)
 
 
     def reload(self, app: Application):
